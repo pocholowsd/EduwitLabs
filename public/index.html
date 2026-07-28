@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aprende Arduino</title>
+    <title>Mini Editor Web</title>
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
@@ -16,39 +16,50 @@
             background-color: #2b2d42;
             color: #edf2f4;
             margin: 0;
-            padding: 25px;
+            padding: 20px;
         }
         .container {
             display: flex;
             flex-direction: column;
             gap: 15px;
-            max-width: 950px;
+            max-width: 1000px;
             margin: 0 auto;
         }
-        h2 { 
+        
+        /* Título Estético y Centrado */
+        .main-title {
+            text-align: center;
             color: #a8e6cf;
-            margin-bottom: 5px; 
             font-weight: 600;
+            font-size: 28px;
+            margin-top: 5px;
+            margin-bottom: 5px;
+            letter-spacing: 1px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
         }
+
         .toolbar {
             display: flex;
             gap: 12px;
             flex-wrap: wrap;
             align-items: center;
+            justify-content: center; /* Centra también los botones para que combine con el título */
         }
         
-        button {
+        button, .btn-file {
             border: none;
-            padding: 10px 22px;
+            padding: 9px 18px;
             cursor: pointer;
-            border-radius: 8px;
+            border-radius: 6px;
             font-weight: bold;
-            font-size: 14px;
+            font-size: 13px;
             color: #1a1a24;
             transition: all 0.2s ease;
             box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            text-align: center;
+            display: inline-block;
         }
-        button:active { transform: scale(0.96); }
+        button:active, .btn-file:active { transform: scale(0.96); }
         button:disabled { background-color: #555 !important; color: #888 !important; cursor: not-allowed; box-shadow: none; }
         
         .btn-connect { background-color: #a8e6cf !important; }
@@ -63,49 +74,139 @@
         #clearBtn { background-color: #ffaaa5; }
         #clearBtn:hover { background-color: #e59994; }
 
-        .CodeMirror {
-            height: 400px;
-            border-radius: 8px;
-            font-size: 15px;
-            border: 2px solid #3f3f5a;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        }
-        h3 { 
-            margin: 10px 0 5px 0; 
-            color: #dcedc1;
-            font-weight: 500;
-        }
-        #console {
+        .btn-file { background-color: #bae1ff; font-family: inherit; }
+        .btn-file:hover { background-color: #a3ccee; }
+
+        .baud-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
             background-color: #1a1a24;
-            color: #a8e6cf;
-            font-family: 'Courier New', Courier, monospace;
-            padding: 15px;
-            height: 200px;
-            overflow-y: scroll;
-            border-radius: 8px;
+            padding: 7px 12px;
+            border-radius: 6px;
             border: 2px solid #3f3f5a;
+        }
+        .baud-container label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #a8e6cf;
+        }
+        .baud-container select {
+            background-color: transparent;
+            color: #edf2f4;
+            border: none;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            outline: none;
+        }
+        .baud-container select option {
+            background-color: #1a1a24;
+            color: #edf2f4;
+        }
+
+        .ide-container {
+            display: flex;
+            flex-direction: column;
+            height: 530px; 
+            border: 2px solid #3f3f5a;
+            border-radius: 8px;
+            overflow: hidden; 
+            box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+            background-color: #282a36; 
+        }
+
+        .CodeMirror {
+            flex-grow: 1; 
+            height: auto !important; 
+            font-size: 15px;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            border-radius: 0; 
+            border: none;
+        }
+
+        .terminal-panel {
+            background-color: #1a1a24;
+            border-top: 2px solid #14141d; 
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .terminal-panel summary {
+            background-color: #21222c; 
+            color: #a8e6cf;
+            font-weight: 600;
+            padding: 8px 15px;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            user-select: none;
+            outline: none;
+            display: flex;
+            align-items: center;
+        }
+        
+        .terminal-panel[open] summary {
+            border-bottom: 1px solid #3f3f5a;
+        }
+        
+        .terminal-panel summary::marker {
+            color: #ff9aa2;
+        }
+
+        #console {
+            background-color: #14141d; 
+            color: #dcedc1;
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            padding: 12px 15px;
             font-size: 14px;
             line-height: 1.5;
             white-space: pre-wrap;
             word-wrap: break-word;
+            height: 130px; /* Consola ligeramente más corta por defecto */
+            min-height: 80px; 
+            max-height: 300px; 
+            overflow-y: auto; 
+            resize: vertical; 
+            display: block;
+        }
+
+        #console::-webkit-resizer {
+            background-color: #3f3f5a;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2>Mi Primer Programa en Arduino</h2>
+        <!-- Título actualizado -->
+        <h2 class="main-title">Mini Editor Web</h2>
         
         <div class="toolbar">
-            <!-- Interfaz súper limpia: Solo botones -->
             <button id="connectBtn" class="btn-connect">Conectar Placa</button>
-            <button id="uploadBtn" disabled>¡Subir a mi Arduino!</button>
-            <button id="clearBtn">Limpiar Pantalla</button>
+            <button id="uploadBtn" disabled>Subir</button>
+            <button id="clearBtn">Limpiar Terminal</button>
+            
+            <label for="fileInput" class="btn-file">Cargar</label>
+            <input type="file" id="fileInput" accept=".ino,.cpp" style="display: none;">
+            
+            <div class="baud-container">
+                <label for="baudRate">Baudios:</label>
+                <select id="baudRate">
+                    <option value="9600">9600</option>
+                    <option value="19200">19200</option>
+                    <option value="38400">38400</option>
+                    <option value="57600">57600</option>
+                    <option value="115200" selected>115200</option>
+                </select>
+            </div>
         </div>
 
-        <textarea id="codeEditor">// ¡Escribe aquí tu código!
+        <div class="ide-container">
+            <textarea id="codeEditor">// ¡Escribe aquí tu código!
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   pinMode(13, OUTPUT);
 }
 
@@ -118,8 +219,11 @@ void loop() {
 }
 </textarea>
 
-        <h3>Mensajes de mi Arduino</h3>
-        <div id="console">¡Hola! Haz clic en "Conectar Placa" para empezar.<br></div>
+            <details open id="monitorDetails" class="terminal-panel">
+                <summary>Terminal / Monitor Serial</summary>
+                <div id="console">¡Hola! Haz clic en "Conectar Placa" para empezar.<br></div>
+            </details>
+        </div>
     </div>
 
     <script>
@@ -134,15 +238,54 @@ void loop() {
         let keepReading = false;
         const decoder = new TextDecoder();
 
+        // Cambiar el puerto automáticamente entre pestañas usando BroadcastChannel
+        const canalSerial = new BroadcastChannel('canal_arduino');
+
+        canalSerial.onmessage = async (mensaje) => {
+            if (mensaje.data === 'suelta_el_puerto' && port) {
+                log("<span style='color: #ff9aa2;'>[Sistema] Puerto cedido al Monitor de pantalla completa.</span>");
+                await desconectar(); // Se desconecta automáticamente
+            }
+        };
+
         const connectBtn = document.getElementById('connectBtn');
         const uploadBtn = document.getElementById('uploadBtn');
         const clearBtn = document.getElementById('clearBtn');
         const consoleDiv = document.getElementById('console');
+        const monitorDetails = document.getElementById('monitorDetails');
+        const fileInput = document.getElementById('fileInput');
+        const baudRateSelect = document.getElementById('baudRate');
 
         function log(msg) {
+            if (!monitorDetails.open) {
+                monitorDetails.open = true;
+            }
             consoleDiv.innerHTML += `${msg}<br>`;
             consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
+
+        fileInput.addEventListener('change', (evento) => {
+            const archivo = evento.target.files[0];
+            if (!archivo) return; 
+
+            const lector = new FileReader();
+            lector.onload = function(e) {
+                const contenido = e.target.result;
+                editor.setValue(contenido); 
+                log(`<span style="color: #a8e6cf;">[IDE] Archivo <b>${archivo.name}</b> cargado correctamente.</span>`);
+            };
+            lector.readAsText(archivo);
+            evento.target.value = "";
+        });
+
+        // AUTO-DESCONEXIÓN AL CAMBIAR BAUDIOS
+        baudRateSelect.addEventListener('change', async () => {
+            log(`<span style="color: #ffd3b6;">[IDE] Baudios cambiados a ${baudRateSelect.value}.</span>`);
+            if (port) {
+                log(`<span style="color: #ff9aa2;">[Sistema] Desconectando placa por seguridad. Vuelve a conectar.</span>`);
+                await desconectar();
+            }
+        });
 
         async function liberarPuertoPorCompleto() {
             keepReading = false;
@@ -165,8 +308,10 @@ void loop() {
                             if (done) break;
                             if (value) {
                                 const text = decoder.decode(value);
+
                                 consoleDiv.innerHTML += text.replace(/\r/g, '').replace(/\n/g, '<br>');
                                 consoleDiv.scrollTop = consoleDiv.scrollHeight;
+
                             }
                         }
                     } catch (error) {
@@ -183,27 +328,32 @@ void loop() {
         async function abrirMonitorSerial() {
             try {
                 if (!port) return;
+                const selectedBaudRate = parseInt(baudRateSelect.value, 10);
+                
                 if (!port.readable) {
-                    await port.open({ baudRate: 9600 });
+                    await port.open({ baudRate: selectedBaudRate });
                 }
-                log(`<span style="color: #a8e6cf;">[Sistema] Escuchando a tu Arduino...</span>`);
+                log(`<span style="color: #a8e6cf;">[Hardware] Escuchando Arduino a ${selectedBaudRate} baudios...</span>`);
                 keepReading = true;
                 readSerialLoop(); 
             } catch (e) {
-                log(`<span style="color: #ffaaa5;">[Error]: ${e.message}</span>`);
+                log(`<span style="color: #ffaaa5;">[Error de Hardware]: ${e.message}</span>`);
             }
         }
 
         async function conectar() {
             try {
                 if (!('serial' in navigator)) {
-                    log("<span style='color: #ffaaa5;'>¡Uy! Tu navegador necesita actualizarse. Usa Google Chrome.</span>");
+                    log("<span style='color: #ffaaa5;'>Tu navegador no soporta conexiones Seriales. Usa Chrome o Edge.</span>");
                     return;
                 }
                 
-                // Abre la ventana de selección del navegador para que el niño elija el USB
+                // Cambiar puerto automaticamente entre pestañas
+                canalSerial.postMessage('suelta_el_puerto');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
                 port = await navigator.serial.requestPort();
-                log(`<span style="color: #dcedc1;">[Sistema] ¡Arduino conectado con éxito!</span>`);
+                log(`<span style="color: #dcedc1;">[Hardware] Placa vinculada exitosamente.</span>`);
                 
                 connectBtn.textContent = "Desconectar";
                 connectBtn.className = "btn-disconnect";
@@ -211,7 +361,7 @@ void loop() {
 
                 await abrirMonitorSerial();
             } catch (error) {
-                log(`<span style='color: #ffaaa5;'>Conexión cancelada. ¡Inténtalo de nuevo!</span>`);
+                log(`<span style='color: #ffaaa5;'>Conexión cancelada por el usuario.</span>`);
                 port = null;
             }
         }
@@ -221,7 +371,7 @@ void loop() {
             connectBtn.textContent = "Conectar Placa";
             connectBtn.className = "btn-connect";
             uploadBtn.disabled = true;
-            log("<span style='color: #ff9aa2;'>[Sistema] Arduino desconectado.</span>");
+            log("<span style='color: #ff9aa2;'>[Hardware] Placa desconectada.</span>");
         }
 
         connectBtn.addEventListener('click', async () => {
@@ -236,16 +386,15 @@ void loop() {
             if (!port) return;
 
             uploadBtn.disabled = true;
-            log("<br><span style='color: #ffd3b6;'>Preparando la magia...</span>");
+            log("<br><span style='color: #ffd3b6;'>[1/3] Preparando compilación local...</span>");
             
             await liberarPuertoPorCompleto();
             await new Promise(resolve => setTimeout(resolve, 1200));
 
             const code = editor.getValue();
-            log(`<span style='color: #dcedc1;'>Enviando tu código al Arduino...</span>`);
+            log(`<span style='color: #dcedc1;'>[2/3] Subiendo código (Servidor NodeJS)...</span>`);
 
             try {
-                // Solo enviamos el código; el servidor hará la magia de encontrar el COM
                 const response = await fetch('/upload', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -255,15 +404,15 @@ void loop() {
                 const data = await response.json();
                 
                 if (!response.ok) {
-                    log(`<span style='color: #ffaaa5;'>[Error de compilación]:</span><br><pre style="color: #ffaaa5;">${data.error}</pre>`);
+                    log(`<span style='color: #ffaaa5;'>[Error de Compilación]:</span><br><pre style="color: #ffaaa5;">${data.error}</pre>`);
                 } else {
-                    log("<span style='color: #a8e6cf;'>¡ÉXITO! Tu programa ya está en el Arduino. </span>");
+                    log("<span style='color: #a8e6cf;'>[3/3] ¡ÉXITO! Firmware flasheado en la placa.</span>");
                 }
             } catch (err) {
-                log(`<span style='color: #ffaaa5;'>[Error de red]: ${err.message}</span>`);
+                log(`<span style='color: #ffaaa5;'>[Error de Servidor]: ${err.message}</span>`);
             }
 
-            log("<span style='color: #ffd3b6;'>Reiniciando comunicación...</span>");
+            log("<span style='color: #ffd3b6;'>Reiniciando Monitor Serial...</span>");
             
             try {
                 const ports = await navigator.serial.getPorts();
@@ -274,17 +423,17 @@ void loop() {
                 } else {
                     connectBtn.textContent = "Conectar Placa";
                     connectBtn.className = "btn-connect";
-                    log("<span style='color: #ffaaa5;'>Por favor vuelve a conectar tu placa en el botón verde.</span>");
+                    log("<span style='color: #ffaaa5;'>Se perdió la conexión USB. Vuelve a conectar.</span>");
                 }
             } catch (err) {
-                log(`<span style='color: #ffaaa5;'>[Error]: ${err.message}</span>`);
+                log(`<span style='color: #ffaaa5;'>[Error de reconexión]: ${err.message}</span>`);
             }
             
             uploadBtn.disabled = false;
         });
 
         clearBtn.addEventListener('click', () => {
-            consoleDiv.innerHTML = "¡Pantalla limpia!<br>";
+            consoleDiv.innerHTML = "Terminal limpiada.<br>";
         });
     </script>
 </body>
