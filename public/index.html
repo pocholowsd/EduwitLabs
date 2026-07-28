@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aprende Arduino</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/clike/clike.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #2b2d42;
+            color: #edf2f4;
+            margin: 0;
+            padding: 25px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 950px;
+            margin: 0 auto;
+        }
+        h2 { 
+            color: #a8e6cf;
+            margin-bottom: 5px; 
+            font-weight: 600;
+        }
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        button {
+            border: none;
+            padding: 10px 22px;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 14px;
+            color: #1a1a24;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        button:active { transform: scale(0.96); }
+        button:disabled { background-color: #555 !important; color: #888 !important; cursor: not-allowed; box-shadow: none; }
+        
+        .btn-connect { background-color: #a8e6cf !important; }
+        .btn-connect:hover { background-color: #95d4bc !important; }
+
+        .btn-disconnect { background-color: #ff9aa2 !important; color: #1a1a24 !important;}
+        .btn-disconnect:hover { background-color: #e58a92 !important; }
+        
+        #uploadBtn { background-color: #ffd3b6; }
+        #uploadBtn:hover { background-color: #e5bda3; }
+
+        #clearBtn { background-color: #ffaaa5; }
+        #clearBtn:hover { background-color: #e59994; }
+
+        .CodeMirror {
+            height: 400px;
+            border-radius: 8px;
+            font-size: 15px;
+            border: 2px solid #3f3f5a;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+        h3 { 
+            margin: 10px 0 5px 0; 
+            color: #dcedc1;
+            font-weight: 500;
+        }
+        #console {
+            background-color: #1a1a24;
+            color: #a8e6cf;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            height: 200px;
+            overflow-y: scroll;
+            border-radius: 8px;
+            border: 2px solid #3f3f5a;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>Mi Primer Programa en Arduino</h2>
+        
+        <div class="toolbar">
+            <!-- Interfaz súper limpia: Solo botones -->
+            <button id="connectBtn" class="btn-connect">Conectar Placa</button>
+            <button id="uploadBtn" disabled>¡Subir a mi Arduino!</button>
+            <button id="clearBtn">Limpiar Pantalla</button>
+        </div>
+
+        <textarea id="codeEditor">// ¡Escribe aquí tu código!
+void setup() {
+  Serial.begin(9600);
+  pinMode(13, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(13, HIGH);
+  Serial.println("¡Hola desde mi Arduino!");
+  delay(1000);
+  digitalWrite(13, LOW);
+  delay(1000);
+}
+</textarea>
+
+        <h3>Mensajes de mi Arduino</h3>
+        <div id="console">¡Hola! Haz clic en "Conectar Placa" para empezar.<br></div>
+    </div>
+
+    <script>
+        const editor = CodeMirror.fromTextArea(document.getElementById('codeEditor'), {
+            lineNumbers: true,
+            mode: "text/x-c++src",
+            theme: "dracula"
+        });
+
+        let port = null;
+        let reader = null;
+        let keepReading = false;
+        const decoder = new TextDecoder();
+
+        const connectBtn = document.getElementById('connectBtn');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const consoleDiv = document.getElementById('console');
+
+        function log(msg) {
+            consoleDiv.innerHTML += `${msg}<br>`;
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }
+
+        async function liberarPuertoPorCompleto() {
+            keepReading = false;
+            if (reader) {
+                try { await reader.cancel(); } catch (e) {} 
+            }
+            if (port) {
+                try { await port.close(); } catch (e) {}
+                port = null;
+            }
+        }
+
+        async function readSerialLoop() {
+            try {
+                while (port && port.readable && keepReading) {
+                    reader = port.readable.getReader();
+                    try {
+                        while (keepReading) {
+                            const { value, done } = await reader.read();
+                            if (done) break;
+                            if (value) {
+                                const text = decoder.decode(value);
+                                consoleDiv.innerHTML += text.replace(/\r/g, '').replace(/\n/g, '<br>');
+                                consoleDiv.scrollTop = consoleDiv.scrollHeight;
+                            }
+                        }
+                    } catch (error) {
+                    } finally {
+                        if (reader) {
+                            reader.releaseLock();
+                            reader = null;
+                        }
+                    }
+                }
+            } catch (err) {}
+        }
+
+        async function abrirMonitorSerial() {
+            try {
+                if (!port) return;
+                if (!port.readable) {
+                    await port.open({ baudRate: 9600 });
+                }
+                log(`<span style="color: #a8e6cf;">[Sistema] Escuchando a tu Arduino...</span>`);
+                keepReading = true;
+                readSerialLoop(); 
+            } catch (e) {
+                log(`<span style="color: #ffaaa5;">[Error]: ${e.message}</span>`);
+            }
+        }
+
+        async function conectar() {
+            try {
+                if (!('serial' in navigator)) {
+                    log("<span style='color: #ffaaa5;'>¡Uy! Tu navegador necesita actualizarse. Usa Google Chrome.</span>");
+                    return;
+                }
+                
+                // Abre la ventana de selección del navegador para que el niño elija el USB
+                port = await navigator.serial.requestPort();
+                log(`<span style="color: #dcedc1;">[Sistema] ¡Arduino conectado con éxito!</span>`);
+                
+                connectBtn.textContent = "Desconectar";
+                connectBtn.className = "btn-disconnect";
+                uploadBtn.disabled = false;
+
+                await abrirMonitorSerial();
+            } catch (error) {
+                log(`<span style='color: #ffaaa5;'>Conexión cancelada. ¡Inténtalo de nuevo!</span>`);
+                port = null;
+            }
+        }
+
+        async function desconectar() {
+            await liberarPuertoPorCompleto();
+            connectBtn.textContent = "Conectar Placa";
+            connectBtn.className = "btn-connect";
+            uploadBtn.disabled = true;
+            log("<span style='color: #ff9aa2;'>[Sistema] Arduino desconectado.</span>");
+        }
+
+        connectBtn.addEventListener('click', async () => {
+            if (port) {
+                await desconectar();
+            } else {
+                await conectar();
+            }
+        });
+
+        uploadBtn.addEventListener('click', async () => {
+            if (!port) return;
+
+            uploadBtn.disabled = true;
+            log("<br><span style='color: #ffd3b6;'>Preparando la magia...</span>");
+            
+            await liberarPuertoPorCompleto();
+            await new Promise(resolve => setTimeout(resolve, 1200));
+
+            const code = editor.getValue();
+            log(`<span style='color: #dcedc1;'>Enviando tu código al Arduino...</span>`);
+
+            try {
+                // Solo enviamos el código; el servidor hará la magia de encontrar el COM
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: code, board: 'arduino:avr:uno' })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    log(`<span style='color: #ffaaa5;'>[Error de compilación]:</span><br><pre style="color: #ffaaa5;">${data.error}</pre>`);
+                } else {
+                    log("<span style='color: #a8e6cf;'>¡ÉXITO! Tu programa ya está en el Arduino. </span>");
+                }
+            } catch (err) {
+                log(`<span style='color: #ffaaa5;'>[Error de red]: ${err.message}</span>`);
+            }
+
+            log("<span style='color: #ffd3b6;'>Reiniciando comunicación...</span>");
+            
+            try {
+                const ports = await navigator.serial.getPorts();
+                if (ports.length > 0) {
+                    port = ports[0];
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    await abrirMonitorSerial();
+                } else {
+                    connectBtn.textContent = "Conectar Placa";
+                    connectBtn.className = "btn-connect";
+                    log("<span style='color: #ffaaa5;'>Por favor vuelve a conectar tu placa en el botón verde.</span>");
+                }
+            } catch (err) {
+                log(`<span style='color: #ffaaa5;'>[Error]: ${err.message}</span>`);
+            }
+            
+            uploadBtn.disabled = false;
+        });
+
+        clearBtn.addEventListener('click', () => {
+            consoleDiv.innerHTML = "¡Pantalla limpia!<br>";
+        });
+    </script>
+</body>
+</html>
