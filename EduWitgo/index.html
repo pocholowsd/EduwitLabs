@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eduwit GO - Editor JSON para Arduino</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; overflow-x: hidden; }
+        #sidebar { min-height: 100vh; }
+        .nav-link { color: #adb5bd; cursor: pointer; }
+        .nav-link.active, .nav-link:hover { color: #fff; background-color: rgba(255,255,255,0.1); border-radius: 0.375rem; }
+        .card { box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: none; margin-bottom: 1.5rem; }
+        .sticky-panel { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow-y: auto; }
+        pre { background-color: #212529; color: #f8f9fa; padding: 1rem; border-radius: 0.375rem; max-height: 400px; overflow-y: auto; }
+        .action-block { border-left: 4px solid #0d6efd; padding-left: 1rem; margin-bottom: 1rem; background: #fff; padding: 1rem; border-radius: 0.375rem; border: 1px solid #dee2e6; border-left: 4px solid #0d6efd; }
+        .content-section { display: none; }
+        .content-section.active { display: block; }
+        .row-disabled { opacity: 0.5; background-color: #e9ecef; }
+        .btn-add-floating { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <nav id="sidebar" class="col-md-3 col-lg-2 d-md-block bg-dark text-white p-3">
+            <h4 class="pb-3 mb-4 border-bottom text-primary fw-bold">
+                <i class="bi bi-cpu-fill me-2"></i>Eduwit GO
+            </h4>
+            <ul class="nav flex-column">
+                <li class="nav-item mb-1"><a class="nav-link active" data-target="categorias-section"><i class="bi bi-tags me-2"></i>Categorías</a></li>
+                <li class="nav-item mb-1"><a class="nav-link" data-target="programas-section"><i class="bi bi-list-task me-2"></i>Programas</a></li>
+            </ul>
+        </nav>
+
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+            
+            <div id="categorias-section" class="content-section active">
+                <header class="pb-3 mb-4 border-bottom"><h1 class="fs-4">Gestión de Categorías</h1></header>
+                <div class="row">
+                    <div class="col-md-4 mb-4">
+                        <div class="card p-4">
+                            <h5 class="card-title text-primary mb-3"><i class="bi bi-folder-plus"></i> Nueva Categoría</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Nombre</label>
+                                <input type="text" id="newCatName" class="form-control" placeholder="Ej. Actuadores">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Color Representativo</label>
+                                <input type="color" id="newCatColor" class="form-control form-control-color w-100" value="#0d6efd">
+                            </div>
+                            <button id="addCatBtn" class="btn btn-primary w-100"><i class="bi bi-plus-circle"></i> Agregar</button>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row" id="categoriesContainer"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="programas-section" class="content-section">
+                <header class="pb-3 mb-4 border-bottom d-flex justify-content-between align-items-center">
+                    <h1 class="fs-4">Programas Registrados</h1>
+                </header>
+                
+                <div class="card p-4 border-top border-primary border-4">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle" id="savedProgramsTable">
+                            <thead class="table-light"><tr><th>ID</th><th>Nombre</th><th>Categoría</th><th>Estado</th><th class="text-end">Acciones</th></tr></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="editor-section" class="content-section">
+                <header class="pb-3 mb-4 border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <h1 class="fs-4 text-primary m-0"><i class="bi bi-pencil-square"></i> Editor de Programa</h1>
+                    
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button class="btn btn-outline-secondary" id="btnBackToCategories"><i class="bi bi-tags"></i> Volver a Categorías</button>
+                        <button class="btn btn-outline-secondary" id="btnBackToPrograms"><i class="bi bi-list-task"></i> Volver a Programas</button>
+                        <div class="vr mx-1"></div> 
+                        <button class="btn btn-primary" id="btnRegisterProgram"><i class="bi bi-floppy"></i> Registrar</button>
+                        <button class="btn btn-warning d-none" id="btnUpdateProgram"><i class="bi bi-pencil-square"></i> Actualizar</button>
+                    </div>
+                </header>
+
+                <div class="row">
+                    <div class="col-lg-7">
+                        <div class="card p-4">
+                            <h5 class="card-title text-primary mb-3"><i class="bi bi-info-circle"></i> Información General</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="progName" class="form-label">Nombre del Programa:</label>
+                                    <input type="text" id="progName" class="form-control" value="Mi Programa Arduino">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label for="categorySelect" class="form-label">Categoría asignada:</label>
+                                    <select id="categorySelect" class="form-select"></select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title text-primary mb-0"><i class="bi bi-gear-wide-connected"></i> Terminales (Setup)</h5>
+                                <button class="btn btn-sm btn-outline-primary" id="addSetupRow"><i class="bi bi-plus-lg"></i> Agregar Pin</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table align-middle" id="setupTable">
+                                    <thead><tr><th>Label</th><th>Pin</th><th>Mode</th><th>Type</th><th></th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title text-primary mb-0"><i class="bi bi-memory"></i> Variables en Memoria</h5>
+                                <button class="btn btn-sm btn-outline-primary" id="addVariableRow"><i class="bi bi-plus-lg"></i> Agregar Variable</button>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table align-middle" id="variablesTable">
+                                    <thead><tr><th>Nombre</th><th>Tipo</th><th></th></tr></thead>
+                                    <tbody></tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <div class="card p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h5 class="card-title text-primary mb-0"><i class="bi bi-list-ol"></i> Flujo Lineal</h5>
+                                <button class="btn btn-sm btn-primary" id="addActionBlock"><i class="bi bi-plus-circle"></i> Nueva Acción</button>
+                            </div>
+                            <div id="actionsContainer"></div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <div class="sticky-panel">
+                            <div class="card p-4 bg-dark text-light">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
+                                    <h5 class="card-title m-0 text-info"><i class="bi bi-filetype-json"></i> Código JSON</h5>
+                                </div>
+                                <pre id="jsonOutput">{}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    const API_URL = 'http://localhost:5000/api';
+    
+    let categories = [];
+    let savedPrograms = [];
+    let currentEditId = null;
+    let actionCounter = 0;
+
+    async function loadData() {
+        try {
+            const resCat = await fetch(`${API_URL}/categorias`);
+            categories = await resCat.json();
+            const resProg = await fetch(`${API_URL}/programas`);
+            savedPrograms = await resProg.json();
+            
+            renderCategories();
+            renderProgramsTable();
+        } catch (error) {
+            console.error("Error al conectar con Flask:", error);
+        }
+    }
+    loadData();
+
+    function getAvailablePins() {
+        let pins = [];
+        $('#setupTable tbody tr').each(function() {
+            let label = $(this).find('.setup-label').val().trim() || 'Sin etiqueta';
+            let pin = parseInt($(this).find('.setup-pin').val());
+            if (!isNaN(pin)) pins.push({ pin: pin, label: label });
+        });
+        return pins;
+    }
+
+    function getAvailableVariables() {
+        let vars = [];
+        $('#variablesTable tbody tr').each(function() {
+            let name = $(this).find('.var-name').val().trim();
+            if (name) vars.push(name);
+        });
+        return vars;
+    }
+
+    function buildPinOptions(selectedVal) {
+        let options = '<option value="">Seleccione un pin...</option>';
+        getAvailablePins().forEach(p => {
+            let sel = (p.pin == selectedVal) ? 'selected' : '';
+            options += `<option value="${p.pin}" ${sel}>${p.label} (Pin ${p.pin})</option>`;
+        });
+        return options;
+    }
+
+    function buildVarOptions(selectedVal) {
+        let options = '<option value="">Seleccione una variable...</option>';
+        getAvailableVariables().forEach(v => {
+            let sel = (v === selectedVal) ? 'selected' : '';
+            options += `<option value="${v}" ${sel}>${v}</option>`;
+        });
+        return options;
+    }
+
+    function switchView(viewId) {
+        $('.content-section').removeClass('active');
+        $('#' + viewId).addClass('active');
+    }
+
+    $('.nav-link').on('click', function() {
+        $('.nav-link').removeClass('active');
+        $(this).addClass('active');
+        switchView($(this).data('target'));
+    });
+
+    $('#btnBackToCategories').click(function() {
+        switchView('categorias-section');
+        $('.nav-link').removeClass('active');
+        $('[data-target="categorias-section"]').addClass('active');
+    });
+
+    $('#btnBackToPrograms').click(function() {
+        switchView('programas-section');
+        $('.nav-link').removeClass('active');
+        $('[data-target="programas-section"]').addClass('active');
+    });
+
+    function renderCategories() {
+        const $select = $('#categorySelect');
+        const $container = $('#categoriesContainer');
+        $select.empty();
+        $container.empty();
+
+        categories.forEach(cat => {
+            $select.append(`<option value="${cat.id}">${cat.nombre || cat.name}</option>`);
+            const programCount = savedPrograms.filter(p => p.categoryId === cat.id).length;
+            const catName = cat.nombre || cat.name;
+
+            $container.append(`
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 border-top border-4 position-relative" style="border-top-color: ${cat.color} !important;">
+                        <div class="card-body">
+                            <h5 class="card-title d-flex justify-content-between mb-0 align-items-center">
+                                <span>
+                                    <i class="bi bi-tag-fill me-2" style="color:${cat.color}"></i>${catName}
+                                    <span class="badge bg-light text-dark border ms-2" title="Programas Registrados">${programCount}</span>
+                                </span>
+                                <span class="badge bg-secondary" style="font-size: 0.7rem;">ID: ${cat.id}</span>
+                            </h5>
+                        </div>
+                        <button class="btn btn-primary position-absolute bottom-0 end-0 m-3 btn-add-floating btn-redirect-cat" data-id="${cat.id}" title="Nuevo en ${catName}">
+                            <i class="bi bi-plus-lg"></i>
+                        </button>
+                    </div>
+                </div>
+            `);
+        });
+        updateJSON();
+    }
+
+    $('#addCatBtn').on('click', async function() {
+        const name = $('#newCatName').val().trim();
+        const color = $('#newCatColor').val();
+        if (name) {
+            const response = await fetch(`${API_URL}/categorias`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, color }) });
+            categories.push(await response.json());
+            renderCategories();
+            $('#newCatName').val('');
+        }
+    });
+
+    $('#categorySelect').on('change', updateJSON);
+
+    $(document).on('click', '.btn-redirect-cat', function() {
+        const targetCatId = $(this).data('id');
+        currentEditId = null;
+        $('#progName').val('Nuevo Programa');
+        $('#setupTable tbody').empty();
+        $('#variablesTable tbody').empty();
+        $('#actionsContainer').empty();
+        actionCounter = 0;
+        $('#categorySelect').val(targetCatId);
+        $('#btnRegisterProgram').removeClass('d-none');
+        $('#btnUpdateProgram').addClass('d-none');
+        updateJSON();
+        switchView('editor-section');
+        $('.nav-link').removeClass('active');
+    });
+
+    function renderProgramsTable() {
+        const $tbody = $('#savedProgramsTable tbody');
+        $tbody.empty();
+
+        if (savedPrograms.length === 0) {
+            $tbody.append('<tr><td colspan="5" class="text-center text-muted">No hay programas registrados</td></tr>');
+            return;
+        }
+
+        savedPrograms.forEach(prog => {
+            const cat = categories.find(c => c.id === prog.categoryId) || categories[0];
+            const disabledClass = prog.disabled ? 'row-disabled' : '';
+            const statusBadge = prog.disabled ? '<span class="badge bg-danger">Deshabilitado</span>' : '<span class="badge bg-success">Activo</span>';
+            const toggleIcon = prog.disabled ? 'bi-check-circle' : 'bi-slash-circle';
+            const toggleColor = prog.disabled ? 'text-success' : 'text-danger';
+            
+            $tbody.append(`
+                <tr class="${disabledClass}">
+                    <td><strong>#${prog.id}</strong></td>
+                    <td>${prog.name}</td>
+                    <td><span class="badge" style="background-color:${cat.color}">${cat.nombre || cat.name}</span></td>
+                    <td>${statusBadge}</td>
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-light text-primary btn-edit-prog" data-id="${prog.id}" title="Editar" ${prog.disabled ? 'disabled' : ''}><i class="bi bi-pencil-square"></i></button>
+                        <button class="btn btn-sm btn-light ${toggleColor} btn-toggle-prog" data-id="${prog.id}"><i class="bi ${toggleIcon}"></i></button>
+                    </td>
+                </tr>
+            `);
+        });
+    }
+
+    $(document).on('click', '.btn-edit-prog', function() {
+        const id = parseInt($(this).attr('data-id'));
+        const prog = savedPrograms.find(p => p.id === id);
+        if (!prog || prog.disabled) return;
+
+        currentEditId = prog.id;
+        $('#progName').val(prog.name);
+        $('#categorySelect').val(prog.categoryId);
+        $('#setupTable tbody').empty();
+        $('#variablesTable tbody').empty();
+        $('#actionsContainer').empty();
+        actionCounter = 0;
+
+        let data = prog.jsonData || prog.json_data;
+        if (typeof data === 'string') {
+            try { data = JSON.parse(data); } catch(e) {}
+        }
+
+        if (data && data.setup) data.setup.forEach(s => addSetupField(s.label, s.pin, s.mode, s.type));
+        if (data && data.variables) data.variables.forEach(v => addVariableField(v.name, v.type));
+        if (data && data.actions) {
+            Object.values(data.actions).forEach(act => {
+                if (act.options && typeof act.options === 'object') act.options = JSON.stringify(act.options, null, 2);
+                addActionField(act.command, act);
+            });
+        }
+
+        $('#btnRegisterProgram').addClass('d-none');
+        $('#btnUpdateProgram').removeClass('d-none');
+        updateJSON();
+        switchView('editor-section');
+        $('.nav-link').removeClass('active');
+    });
+
+    $(document).on('click', '.btn-toggle-prog', async function() {
+        const id = parseInt($(this).attr('data-id'));
+        const index = savedPrograms.findIndex(p => p.id === id);
+        
+        if (index !== -1) {
+            const newState = !savedPrograms[index].disabled;
+            await fetch(`${API_URL}/programas/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ disabled: newState }) });
+            savedPrograms[index].disabled = newState;
+            if (newState && currentEditId === id) $('#btnBackToPrograms').click();
+            renderProgramsTable();
+        }
+    });
+
+    $('#btnRegisterProgram').click(async function() {
+        const programName = $('#progName').val().trim() || "SinNombre";
+        const categoryId = parseInt($('#categorySelect').val()) || 1;
+        const jsonData = JSON.parse($('#jsonOutput').text());
+
+        const response = await fetch(`${API_URL}/programas`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: programName, categoryId: categoryId, jsonData: jsonData })
+        });
+        const result = await response.json();
+        
+        savedPrograms.push({ id: result.id, name: programName, categoryId: categoryId, disabled: false, jsonData: jsonData });
+        
+        const categoriaActual = $('#categorySelect').val();
+        renderProgramsTable();
+        renderCategories(); 
+        $('#categorySelect').val(categoriaActual);
+        
+        alert('Programa registrado exitosamente.');
+        
+        $('#progName').val('Nuevo Programa'); 
+        $('#setupTable tbody').empty();       
+        $('#variablesTable tbody').empty();   
+        $('#actionsContainer').empty();       
+        actionCounter = 0;                    
+        
+        refreshActionDropdowns();
+        updateJSON();
+    });
+
+    $('#btnUpdateProgram').click(async function() {
+        if (!currentEditId) return;
+        const programName = $('#progName').val().trim() || "SinNombre";
+        const categoryId = parseInt($('#categorySelect').val()) || 1;
+        const jsonData = JSON.parse($('#jsonOutput').text());
+        await fetch(`${API_URL}/programas/${currentEditId}`, {
+            method: 'PUT', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name: programName, categoryId: categoryId, jsonData: jsonData })
+        });
+        const index = savedPrograms.findIndex(p => p.id === currentEditId);
+        if (index !== -1) {
+            savedPrograms[index].name = programName;
+            savedPrograms[index].categoryId = categoryId;
+            savedPrograms[index].jsonData = jsonData;
+            renderProgramsTable();
+            renderCategories();
+            alert('Programa actualizado.');
+            $('#btnBackToPrograms').click();
+        }
+    });
+
+    $('#progName').on('input', updateJSON);
+    $(document).on('input change', 'input, select, textarea', updateJSON);
+
+    $('#addSetupRow').click(() => addSetupField());
+    $('#addVariableRow').click(() => addVariableField());
+    $('#addActionBlock').click(() => addActionField());
+
+    $(document).on('input change', '#setupTable input, #variablesTable input', function() {
+        refreshActionDropdowns();
+        updateJSON();
+    });
+
+    $(document).on('click', '.btn-delete-row', function() { 
+        $(this).closest('tr').remove(); 
+        refreshActionDropdowns(); 
+        updateJSON(); 
+    });
+
+    $(document).on('click', '.btn-delete-action', function() { $(this).closest('.action-block').remove(); renumberActions(); updateJSON(); });
+
+    $(document).on('change', '.command-select', function() {
+        const command = $(this).val();
+        $(this).closest('.action-block').find('.command-fields').html(getFieldsForCommand(command));
+        updateJSON();
+    });
+
+    function addSetupField(label="", pin="", mode="INPUT", type="Digital") {
+        const row = `<tr><td><input type="text" class="form-control form-control-sm setup-label" value="${label}"></td><td><input type="number" class="form-control form-control-sm setup-pin" value="${pin}"></td><td><select class="form-select form-select-sm setup-mode"><option value="INPUT" ${mode==='INPUT'?'selected':''}>INPUT</option><option value="OUTPUT" ${mode==='OUTPUT'?'selected':''}>OUTPUT</option></select></td><td><select class="form-select form-select-sm setup-type"><option value="Digital" ${type==='Digital'?'selected':''}>Digital</option><option value="Analog" ${type==='Analog'?'selected':''}>Analog</option></select></td><td><button class="btn btn-sm btn-link text-danger btn-delete-row"><i class="bi bi-trash"></i></button></td></tr>`;
+        $('#setupTable tbody').append(row); updateJSON();
+    }
+    
+    function addVariableField(name="", type="Number") {
+        const row = `<tr><td><input type="text" class="form-control form-control-sm var-name" value="${name}"></td><td><select class="form-select form-select-sm var-type"><option value="Number" ${type==='Number'?'selected':''}>Number</option><option value="String" ${type==='String'?'selected':''}>String</option><option value="Boolean" ${type==='Boolean'?'selected':''}>Boolean</option></select></td><td><button class="btn btn-sm btn-link text-danger btn-delete-row"><i class="bi bi-trash"></i></button></td></tr>`;
+        $('#variablesTable tbody').append(row); updateJSON();
+    }
+
+    function addActionField(command="DigitalWrite", data={}) {
+        actionCounter++;
+        const block = `<div class="action-block" data-id="${actionCounter}">
+            <div class="row g-2 align-items-center mb-2">
+                <div class="col-auto"><span class="badge bg-secondary action-index fs-6">${actionCounter}</span></div>
+                <div class="col-sm-4">
+                    <select class="form-select form-select-sm command-select">
+                        <optgroup label="Salidas y Actuadores">
+                            <option value="DigitalWrite" ${command==='DigitalWrite'?'selected':''}>Digital Write</option>
+                            <option value="AnalogWrite" ${command==='AnalogWrite'?'selected':''}>Analog Write (PWM)</option>
+                            <option value="MotorDrive" ${command==='MotorDrive'?'selected':''}>Motor Drive (L293D)</option>
+                            <option value="ServoSet" ${command==='ServoSet'?'selected':''}>Servo Set</option>
+                        </optgroup>
+                        <optgroup label="Entradas y Sensores">
+                            <option value="DigitalRead" ${command==='DigitalRead'?'selected':''}>Digital Read</option>
+                            <option value="AnalogRead" ${command==='AnalogRead'?'selected':''}>Analog Read</option>
+                            <option value="ReadUltrasonic" ${command==='ReadUltrasonic'?'selected':''}>Read Ultrasonic</option>
+                            <option value="PulseIn" ${command==='PulseIn'?'selected':''}>Pulse In</option>
+                        </optgroup>
+                        <optgroup label="Matemáticas y Lógica">
+                            <option value="Math" ${command==='Math'?'selected':''}>Math (Matemáticas)</option>
+                            <option value="Compare" ${command==='Compare'?'selected':''}>Compare (Condicional)</option>
+                        </optgroup>
+                        <optgroup label="Tiempos, Ciclos y Depuración">
+                            <option value="Delay" ${command==='Delay'?'selected':''}>Delay (Pausa)</option>
+                            <option value="Repeat" ${command==='Repeat'?'selected':''}>Repeat (Ciclo)</option>
+                            <option value="Goto" ${command==='Goto'?'selected':''}>Goto (Salto)</option>
+                            <option value="SerialPrint" ${command==='SerialPrint'?'selected':''}>Serial Print</option>
+                        </optgroup>
+                    </select>
+                </div>
+                <div class="col text-end"><button class="btn btn-sm btn-link text-danger btn-delete-action p-0"><i class="bi bi-x-circle-fill"></i> Quitar</button></div>
+            </div>
+            <div class="command-fields row g-2">${getFieldsForCommand(command, data)}</div>
+        </div>`;
+        $('#actionsContainer').append(block); 
+        renumberActions(); 
+        updateJSON();
+    }
+
+    function getFieldsForCommand(command, data={}) {
+        let fields = '';
+        switch(command) {
+            case 'DigitalWrite': 
+                fields = `
+                    <div class="col-sm-6"><select class="form-select form-select-sm field-pin">${buildPinOptions(data.pin)}</select></div>
+                    <div class="col-sm-6"><select class="form-select form-select-sm field-value"><option value="HIGH" ${data.value==='HIGH'?'selected':''}>HIGH (1)</option><option value="LOW" ${data.value==='LOW'?'selected':''}>LOW (0)</option></select></div>`; 
+                break;
+            case 'AnalogWrite':
+            case 'ServoSet':
+                fields = `
+                    <div class="col-sm-6"><select class="form-select form-select-sm field-pin">${buildPinOptions(data.pin)}</select></div>
+                    <div class="col-sm-6"><input type="number" class="form-control form-control-sm field-value" placeholder="${command==='ServoSet'? 'Ángulo (0-180)' : 'Valor (0-255)'}" value="${data.value || ''}"></div>`; 
+                break;
+            case 'MotorDrive':
+                fields = `
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-motor"><option value="A" ${data.motor==='A'?'selected':''}>Motor A</option><option value="B" ${data.motor==='B'?'selected':''}>Motor B</option></select></div>
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-dir"><option value="FWD" ${data.dir==='FWD'?'selected':''}>Adelante</option><option value="REV" ${data.dir==='REV'?'selected':''}>Atrás</option><option value="STOP" ${data.dir==='STOP'?'selected':''}>Detener</option></select></div>
+                    <div class="col-sm-4"><input type="number" class="form-control form-control-sm field-speed" placeholder="Velocidad (0-255)" value="${data.speed || ''}"></div>`;
+                break;
+            case 'DigitalRead':
+            case 'AnalogRead': 
+                fields = `
+                    <div class="col-sm-6"><select class="form-select form-select-sm field-pin">${buildPinOptions(data.pin)}</select></div>
+                    <div class="col-sm-6"><select class="form-select form-select-sm field-target">${buildVarOptions(data.target)}</select></div>`; 
+                break;
+            case 'ReadUltrasonic':
+                let trigOptions = buildPinOptions(data.trig).replace('>Seleccione un pin...<', '>Pin Trig...<');
+                let echoOptions = buildPinOptions(data.echo).replace('>Seleccione un pin...<', '>Pin Echo...<');
+                fields = `
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-trig">${trigOptions}</select></div>
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-echo">${echoOptions}</select></div>
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-target">${buildVarOptions(data.target)}</select></div>`;
+                break;
+            case 'PulseIn':
+                fields = `
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-pin">${buildPinOptions(data.pin)}</select></div>
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-state"><option value="HIGH" ${data.state==='HIGH'?'selected':''}>HIGH</option><option value="LOW" ${data.state==='LOW'?'selected':''}>LOW</option></select></div>
+                    <div class="col-sm-4"><select class="form-select form-select-sm field-target">${buildVarOptions(data.target)}</select></div>`;
+                break;
+            case 'Calculate':
+            case 'Math': 
+                fields = `
+                    <div class="col-sm-3"><input type="text" class="form-control form-control-sm field-op1" placeholder="Valor A" value="${data.op1 || ''}"></div>
+                    <div class="col-sm-3"><select class="form-select form-select-sm field-operator"><option value="+" ${data.operator==='+'?'selected':''}>+</option><option value="-" ${data.operator==='-'?'selected':''}>-</option><option value="*" ${data.operator==='*'?'selected':''}>*</option><option value="/" ${data.operator==='/'?'selected':''}>/</option></select></div>
+                    <div class="col-sm-3"><input type="text" class="form-control form-control-sm field-op2" placeholder="Valor B" value="${data.op2 || ''}"></div>
+                    <div class="col-sm-3"><select class="form-select form-select-sm field-target">${buildVarOptions(data.target)}</select></div>`;
+                break;
+            case 'Compare':
+                fields = `
+                    <div class="col-sm-3"><select class="form-select form-select-sm field-var1">${buildVarOptions(data.var1)}</select></div>
+                    <div class="col-sm-3"><select class="form-select form-select-sm field-cond"><option value="==" ${data.condition==='=='?'selected':''}>==</option><option value="!=" ${data.condition==='!='?'selected':''}>!=</option><option value=">" ${data.condition==='>'?'selected':''}>&gt;</option><option value="<" ${data.condition==='<'?'selected':''}>&lt;</option></select></div>
+                    <div class="col-sm-3"><input type="text" class="form-control form-control-sm field-var2" placeholder="Var/Val 2" value="${data.var2 || ''}"></div>
+                    <div class="col-sm-3"><input type="number" class="form-control form-control-sm field-goto" placeholder="Ir a Línea #" value="${data.goto || ''}"></div>`;
+                break;
+            case 'Repeat':
+                fields = `
+                    <div class="col-sm-6"><input type="number" class="form-control form-control-sm field-times" placeholder="Veces a repetir" value="${data.times || ''}"></div>
+                    <div class="col-sm-6"><input type="number" class="form-control form-control-sm field-goto" placeholder="Ir a línea # (Inicio del ciclo)" value="${data.goto || ''}"></div>`;
+                break;
+            case 'Delay': 
+            case 'Goto': 
+                fields = `<div class="col-sm-12"><input type="number" class="form-control form-control-sm field-value" placeholder="${command==='Delay'? 'Milisegundos' : 'Línea a saltar'}" value="${data.value || ''}"></div>`; 
+                break;
+            case 'SerialPrint':
+                fields = `<div class="col-sm-12"><input type="text" class="form-control form-control-sm field-value" placeholder="Texto o Variable a imprimir" value="${data.value || ''}"></div>`;
+                break;
+        }
+        return fields;
+    }
+
+    function renumberActions() {
+        actionCounter = 0;
+        $('#actionsContainer .action-block').each(function() { 
+            actionCounter++; 
+            $(this).find('.action-index').text(actionCounter); 
+        });
+    }
+
+    function refreshActionDropdowns() {
+        $('#actionsContainer .action-block').each(function() {
+            $(this).find('select.field-pin, select.field-trig, select.field-echo').each(function() {
+                let currentVal = $(this).val();
+                let isTrig = $(this).hasClass('field-trig');
+                let isEcho = $(this).hasClass('field-echo');
+                
+                let newHtml = buildPinOptions(currentVal);
+                if(isTrig) newHtml = newHtml.replace('>Seleccione un pin...<', '>Pin Trig...<');
+                if(isEcho) newHtml = newHtml.replace('>Seleccione un pin...<', '>Pin Echo...<');
+                
+                $(this).html(newHtml);
+            });
+            
+            $(this).find('select.field-target, select.field-var1').each(function() {
+                $(this).html(buildVarOptions($(this).val()));
+            });
+        });
+    }
+
+    function updateJSON() {
+        const catId = parseInt($('#categorySelect').val()) || (categories[0] ? categories[0].id : 1);
+        const currentCategory = categories.find(c => c.id === catId) || categories[0];
+        
+        let output = {
+            name: $('#progName').val() || "SinNombre",
+            categoria: { 
+                id: catId, 
+                nombre: currentCategory ? (currentCategory.nombre || currentCategory.name) : "General", 
+                color: currentCategory ? currentCategory.color : "#6c757d" 
+            },
+            setup: [], variables: [], actions: {}
+        };
+
+        $('#setupTable tbody tr').each(function() {
+            let label = $(this).find('.setup-label').val(); 
+            let pin = parseInt($(this).find('.setup-pin').val());
+            if(label || !isNaN(pin)) {
+                output.setup.push({ 
+                    label, 
+                    pin: isNaN(pin) ? 0 : pin, 
+                    mode: $(this).find('.setup-mode').val(), 
+                    type: $(this).find('.setup-type').val() 
+                });
+            }
+        });
+
+        $('#variablesTable tbody tr').each(function() {
+            let name = $(this).find('.var-name').val(); 
+            if(name) output.variables.push({ name, type: $(this).find('.var-type').val() });
+        });
+        
+        $('#actionsContainer .action-block').each(function(index) {
+            let cmd = $(this).find('.command-select').val(); 
+            let actionObj = { command: cmd };
+
+            switch(cmd) {
+                case 'DigitalWrite':
+                    actionObj.pin = parseInt($(this).find('.field-pin').val()) || "";
+                    actionObj.value = $(this).find('.field-value').val();
+                    break;
+                case 'AnalogWrite':
+                case 'ServoSet':
+                    actionObj.pin = parseInt($(this).find('.field-pin').val()) || "";
+                    actionObj.value = parseInt($(this).find('.field-value').val()) || 0;
+                    break;
+                case 'MotorDrive':
+                    actionObj.motor = $(this).find('.field-motor').val();
+                    actionObj.dir = $(this).find('.field-dir').val();
+                    actionObj.speed = parseInt($(this).find('.field-speed').val()) || 0;
+                    break;
+                case 'DigitalRead':
+                case 'AnalogRead':
+                    actionObj.pin = parseInt($(this).find('.field-pin').val()) || "";
+                    actionObj.target = $(this).find('.field-target').val();
+                    break;
+                case 'ReadUltrasonic':
+                    actionObj.trig = parseInt($(this).find('.field-trig').val()) || "";
+                    actionObj.echo = parseInt($(this).find('.field-echo').val()) || "";
+                    actionObj.target = $(this).find('.field-target').val();
+                    break;
+                case 'PulseIn':
+                    actionObj.pin = parseInt($(this).find('.field-pin').val()) || "";
+                    actionObj.state = $(this).find('.field-state').val();
+                    actionObj.target = $(this).find('.field-target').val();
+                    break;
+                case 'Calculate':
+                case 'Math':
+                    actionObj.op1 = $(this).find('.field-op1').val();
+                    actionObj.operator = $(this).find('.field-operator').val();
+                    actionObj.op2 = $(this).find('.field-op2').val();
+                    actionObj.target = $(this).find('.field-target').val();
+                    break;
+                case 'Compare':
+                    actionObj.var1 = $(this).find('.field-var1').val();
+                    actionObj.condition = $(this).find('.field-cond').val();
+                    actionObj.var2 = $(this).find('.field-var2').val();
+                    actionObj.goto = parseInt($(this).find('.field-goto').val()) || 0;
+                    break;
+                case 'Repeat':
+                    actionObj.times = parseInt($(this).find('.field-times').val()) || 0;
+                    actionObj.goto = parseInt($(this).find('.field-goto').val()) || 0;
+                    break;
+                case 'Delay':
+                case 'Goto':
+                    actionObj.value = parseInt($(this).find('.field-value').val()) || 0;
+                    break;
+                case 'SerialPrint':
+                    actionObj.value = $(this).find('.field-value').val();
+                    break;
+            }
+            output.actions[(index + 1).toString()] = actionObj;
+        });
+        
+        $('#jsonOutput').text(JSON.stringify(output, null, 2));
+    }
+});
+</script>
+</body>
+</html>
